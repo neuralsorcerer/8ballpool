@@ -1,0 +1,14 @@
+.cue-stick {
+  position: absolute;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #8b4513, #a0522d);
+  height: 4px;
+  border-radius: 2px;
+}
+
+.power-bar {
+  position: absolute;
+  height: 10px;
+  background: red;
+  border-radius: 5px;
+}
