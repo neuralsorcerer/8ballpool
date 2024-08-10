@@ -63,8 +63,6 @@ The frontend application should now be running on `http://localhost:3000`.
 - Players take turns to pot their respective balls.
 - Pot the black ball to win, but only after potting all your other balls.
 
-![Demo](img/demo.png)
-
 ## License
 
 This project is licensed under the MIT License.
