@@ -1,5 +1,7 @@
 package engine
 
+import "math"
+
 type Game struct {
 	Balls         []*Ball `json:"balls"`
 	CurrentTurn   int     `json:"currentTurn"`
@@ -28,6 +30,7 @@ func NewGame() *Game {
 			Angle:    0,
 			Color:    color,
 			Potted:   false,
+			PottedBy: 0,
 		})
 	}
 
@@ -38,6 +41,7 @@ func NewGame() *Game {
 		Angle:    0,
 		Color:    "white",
 		Potted:   false,
+		PottedBy: 0,
 	})
 	return &Game{Balls: balls, CurrentTurn: 1, Scores: [2]int{0, 0}, PottedBalls: []*Ball{}, CanShoot: true, GameOver: false, WinningPlayer: 0}
 }
@@ -55,6 +59,9 @@ func (g *Game) Update() {
 				moving = true
 			}
 		} else if !contains(g.PottedBalls, ball) {
+			if ball.Color != "white" && ball.PottedBy == 0 {
+				ball.PottedBy = g.CurrentTurn
+			}
 			g.PottedBalls = append(g.PottedBalls, ball)
 			if ball.Color == "black" {
 				if len(g.PottedBalls) < 15 {
@@ -68,8 +75,27 @@ func (g *Game) Update() {
 				g.Scores[g.CurrentTurn-1]++
 			} else {
 				ball.Potted = false
-				ball.X = 100
-				ball.Y = 200
+				ball.PottedBy = 0
+				newX, newY := 100.0, 200.0
+				for {
+					occupied := false
+					for _, other := range g.Balls {
+						if other != ball && !other.Potted && math.Hypot(other.X-newX, other.Y-newY) < 2*ballRadius {
+							occupied = true
+							break
+						}
+					}
+					if !occupied {
+						break
+					}
+					newX += 20
+					if newX > tableWidth-100 {
+						newX = 100
+						newY += 20
+					}
+				}
+				ball.X = newX
+				ball.Y = newY
 				ball.Velocity = 0
 				ball.Angle = 0
 			}
@@ -84,11 +110,11 @@ func (g *Game) Update() {
 		}
 	}
 
-	g.CanShoot = !moving
-
-	if !moving && !g.GameOver {
+	nextCanShoot := !moving
+	if nextCanShoot && !g.GameOver && !g.CanShoot {
 		g.CurrentTurn = 3 - g.CurrentTurn
 	}
+	g.CanShoot = nextCanShoot
 }
 
 func (g *Game) ShootBall(angle, power float64) {

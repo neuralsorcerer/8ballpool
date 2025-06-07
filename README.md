@@ -7,7 +7,7 @@ This is a simple 8 Ball Pool game built using Go for the backend and React with 
 - Realistic ball and cue stick physics
 - Multiplayer support on the same machine
 - Real-time updates using WebSocket
-- Responsive design using Tailwind CSS
+- Visual power meter and highlighted scoreboard
 
 ## Prerequisites
 

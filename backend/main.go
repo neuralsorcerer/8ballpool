@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/papaaannn/8ballpool/engine"
+	"github.com/neuralsorcerer/8ballpool/engine"
 )
 
 var upgrader = websocket.Upgrader{

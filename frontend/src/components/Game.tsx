@@ -1,12 +1,14 @@
 import Konva from "konva";
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Stage, Layer, Circle, Line } from "react-konva";
+import ScoreBoard from "./ScoreBoard";
 
 interface Ball {
   x: number;
   y: number;
   color: string;
   potted: boolean;
+  pottedBy?: number;
 }
 
 interface GameProps {
@@ -34,6 +36,7 @@ const Game: React.FC<GameProps> = ({ ws }) => {
   const [canShoot, setCanShoot] = useState(true);
   const [gameOver, setGameOver] = useState(false);
   const [winningPlayer, setWinningPlayer] = useState(0);
+  const [power, setPower] = useState(0);
 
   const handleWsMessage = useCallback((event: MessageEvent) => {
     const data = JSON.parse(event.data);
@@ -83,6 +86,7 @@ const Game: React.FC<GameProps> = ({ ws }) => {
                 )
               : cueStickRef.current.power,
           };
+          setPower(cueStickRef.current.power);
         }
       }
     }
@@ -91,6 +95,7 @@ const Game: React.FC<GameProps> = ({ ws }) => {
   const handleMouseDown = () => {
     if (canShoot && !gameOver) {
       setIsDragging(true);
+      setPower(0);
     }
   };
 
@@ -101,6 +106,7 @@ const Game: React.FC<GameProps> = ({ ws }) => {
       ws.send(JSON.stringify({ type: "shoot", angle, power: scaledPower }));
     }
     setIsDragging(false);
+    setPower(0);
   };
 
   const restartGame = () => {
@@ -188,30 +194,19 @@ const Game: React.FC<GameProps> = ({ ws }) => {
           </Layer>
         </Stage>
       </div>
-      <div className="flex flex-col items-center">
-        <div className="text-lg font-bold text-black">
-          Player 1 Score: {scores[0]}
-        </div>
-        <div className="text-lg font-bold text-black">
-          Player 2 Score: {scores[1]}
-        </div>
-        <div className="text-lg font-bold text-black">
-          Player {currentTurn}'s Turn
-        </div>
-        {gameOver && (
-          <div className="text-xl font-bold text-red-600">
-            Game Over! Player {winningPlayer} wins!
-          </div>
-        )}
-        {gameOver && (
-          <button
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-700"
-            onClick={restartGame}
-          >
-            Restart Game
-          </button>
-        )}
+      <div className="w-64 h-4 bg-gray-300 rounded overflow-hidden relative">
+        <div className="h-full bg-red-500" style={{ width: `${power}%` }}></div>
+        <span className="absolute inset-0 text-xs text-center text-black">
+          Power: {Math.round(power)}%
+        </span>
       </div>
+      <ScoreBoard
+        scores={scores}
+        currentTurn={currentTurn}
+        winningPlayer={winningPlayer}
+        gameOver={gameOver}
+        onRestart={restartGame}
+      />
       <div className="flex space-x-8 mt-4">
         <div className="text-center">
           <div className="text-lg font-bold text-black">
@@ -219,7 +214,7 @@ const Game: React.FC<GameProps> = ({ ws }) => {
           </div>
           <div className="flex space-x-2 mt-2">
             {pottedBalls
-              .filter((ball) => ball.color !== "white" && currentTurn === 1)
+              .filter((ball) => ball.color !== "white" && ball.pottedBy === 1)
               .map((ball, i) => (
                 <div key={i} className="relative">
                   <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
@@ -238,7 +233,7 @@ const Game: React.FC<GameProps> = ({ ws }) => {
           </div>
           <div className="flex space-x-2 mt-2">
             {pottedBalls
-              .filter((ball) => ball.color !== "white" && currentTurn === 2)
+              .filter((ball) => ball.color !== "white" && ball.pottedBy === 2)
               .map((ball, i) => (
                 <div key={i} className="relative">
                   <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">

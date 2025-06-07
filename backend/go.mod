@@ -1,4 +1,4 @@
-module github.com/papaaannn/8ballpool
+module github.com/neuralsorcerer/8ballpool
 
 go 1.22.2
 
