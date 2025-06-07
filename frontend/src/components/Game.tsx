@@ -1,6 +1,7 @@
 import Konva from "konva";
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Stage, Layer, Circle, Line } from "react-konva";
+import { KonvaEventObject } from "konva/lib/Node";
 import ScoreBoard from "./ScoreBoard";
 
 interface Ball {
@@ -38,6 +39,11 @@ const Game: React.FC<GameProps> = ({ ws }) => {
   const [winningPlayer, setWinningPlayer] = useState(0);
   const [power, setPower] = useState(0);
 
+  const getPowerColor = (value: number) => {
+    const hue = 120 - value * 1.2; // 0 (red) at 100%, 120 (green) at 0%
+    return `hsl(${hue}, 100%, 50%)`;
+  };
+
   const handleWsMessage = useCallback((event: MessageEvent) => {
     const data = JSON.parse(event.data);
     ballsRef.current = data.balls;
@@ -59,11 +65,15 @@ const Game: React.FC<GameProps> = ({ ws }) => {
     }
   }, [ws, handleWsMessage]);
 
-  const handleMouseMove = (e: any) => {
-    const stage = stageRef.current;
-    if (stage && ballsRef.current.length > 0 && canShoot && !gameOver) {
-      const pointer = stage.getPointerPosition();
-      if (pointer) {
+  const updateCue = useCallback(
+    (clientX: number, clientY: number) => {
+      const stage = stageRef.current;
+      if (stage && ballsRef.current.length > 0 && canShoot && !gameOver) {
+        const rect = stage.container().getBoundingClientRect();
+        const pointer = {
+          x: clientX - rect.left,
+          y: clientY - rect.top,
+        };
         const whiteBall = ballsRef.current.find(
           (ball) => ball.color === "white"
         );
@@ -72,7 +82,7 @@ const Game: React.FC<GameProps> = ({ ws }) => {
             ...cueStickRef.current,
             x: pointer.x,
             y: pointer.y,
-            angle: Math.atan2(pointer.y - whiteBall.y, pointer.x - whiteBall.x),
+            angle: Math.atan2(whiteBall.y - pointer.y, whiteBall.x - pointer.x),
             power: isDragging
               ? Math.min(
                   100,
@@ -89,17 +99,11 @@ const Game: React.FC<GameProps> = ({ ws }) => {
           setPower(cueStickRef.current.power);
         }
       }
-    }
-  };
+    },
+    [canShoot, gameOver, isDragging]
+  );
 
-  const handleMouseDown = () => {
-    if (canShoot && !gameOver) {
-      setIsDragging(true);
-      setPower(0);
-    }
-  };
-
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     if (isDragging && ws) {
       const { angle, power } = cueStickRef.current;
       const scaledPower = power / 10; // Scale power down
@@ -107,6 +111,32 @@ const Game: React.FC<GameProps> = ({ ws }) => {
     }
     setIsDragging(false);
     setPower(0);
+  }, [isDragging, ws]);
+
+  const handleMouseMove = (e: KonvaEventObject<MouseEvent>) => {
+    updateCue(e.evt.clientX, e.evt.clientY);
+  };
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      updateCue(e.clientX, e.clientY);
+    };
+    const handleUp = () => {
+      handleMouseUp();
+    };
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup", handleUp);
+    };
+  }, [updateCue, handleMouseUp]);
+
+  const handleMouseDown = () => {
+    if (canShoot && !gameOver) {
+      setIsDragging(true);
+      setPower(0);
+    }
   };
 
   const restartGame = () => {
@@ -116,8 +146,8 @@ const Game: React.FC<GameProps> = ({ ws }) => {
   };
 
   return (
-    <div className="flex flex-col items-center mt-4 space-y-4">
-      <div className="bg-green-700 rounded-lg shadow-lg p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
+      <div className="bg-green-700 rounded-lg shadow-lg p-4 mx-auto">
         <Stage
           width={800}
           height={400}
@@ -195,7 +225,10 @@ const Game: React.FC<GameProps> = ({ ws }) => {
         </Stage>
       </div>
       <div className="w-64 h-4 bg-gray-300 rounded overflow-hidden relative">
-        <div className="h-full bg-red-500" style={{ width: `${power}%` }}></div>
+        <div
+          className="h-full"
+          style={{ width: `${power}%`, backgroundColor: getPowerColor(power) }}
+        ></div>
         <span className="absolute inset-0 text-xs text-center text-black">
           Power: {Math.round(power)}%
         </span>
